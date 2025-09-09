@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Mini Crossword</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2px;
+        }
+        .grid-cell {
+            width: 100%;
+            padding-bottom: 100%; /* Maintain square aspect ratio */
+            position: relative;
+        }
+        .grid-cell input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            text-transform: uppercase;
+            font-weight: 600;
+            border: 1px solid #D1D5DB; /* gray-300 */
+            border-radius: 0.25rem;
+            background-color: #FFFFFF; /* white */
+            caret-color: transparent;
+        }
+        .grid-cell input:focus {
+            outline: none;
+            border-color: #3B82F6; /* blue-500 */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        .grid-cell.black {
+            background-color: #1F2937; /* gray-800 */
+            border-radius: 0.25rem;
+        }
+        .grid-cell .number {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: #4B5563; /* gray-600 */
+        }
+        .clue.active {
+            background-color: #EFF6FF; /* blue-50 */
+        }
+        .cell-highlight {
+             background-color: #DBEAFE !important; /* blue-100 */
+        }
+        .cell-focus {
+            background-color: #BFDBFE !important; /* blue-200 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-6 sm:p-8 rounded-lg shadow-lg w-full max-w-lg mx-4">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Daily Mini</h1>
+            <p id="puzzle-date" class="text-gray-500"></p>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-8">
+            <!-- Crossword Grid -->
+            <div class="w-full md:w-1/2">
+                 <div id="grid-container" class="grid-container aspect-square"></div>
+            </div>
+
+            <!-- Clues -->
+            <div class="w-full md:w-1/2">
+                <div class="mb-4">
+                    <h2 class="text-xl font-semibold mb-2 text-gray-700 border-b pb-1">Across</h2>
+                    <div id="across-clues" class="space-y-1"></div>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold mb-2 text-gray-700 border-b pb-1">Down</h2>
+                    <div id="down-clues" class="space-y-1"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex justify-center">
+            <button id="check-puzzle" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Check Puzzle</button>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="success-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-white p-8 rounded-lg shadow-xl text-center">
+                <h2 class="text-2xl font-bold mb-4">Congratulations!</h2>
+                <p>You've completed the puzzle!</p>
+                <button id="close-modal" class="mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const puzzles = [
+                // Puzzle 1
+                {
+                    date: new Date(2025, 8, 9), // Corresponds to Sept 9, 2025
+                    grid: [
+                        "FLOAT",
+                        "LUNAR",
+                        "OPERA",
+                        "WIDEN",
+                        "TREND"
+                    ],
+                    clues: {
+                        across: [
+                            { number: 1, clue: "Bob like a duck", row: 0, col: 0, len: 5 },
+                            { number: 6, clue: "Of the moon", row: 1, col: 0, len: 5 },
+                            { number: 7, clue: "Puccini production", row: 2, col: 0, len: 5 },
+                            { number: 8, clue: "Make broader", row: 3, col: 0, len: 5 },
+                            { number: 9, clue: "Fashionable direction", row: 4, col: 0, len: 5 }
+                        ],
+                        down: [
+                            { number: 1, clue: "Flower part", row: 0, col: 0, len: 5 },
+                            { number: 2, clue: "Large primate", row: 0, col: 1, len: 5 },
+                            { number: 3, clue: "Ocean motion", row: 0, col: 2, len: 5 },
+                            { number: 4, clue: "Final", row: 0, col: 3, len: 5 },
+                            { number: 5, clue: "Took a seat", row: 0, col: 4, len: 5 }
+                        ]
+                    }
+                },
+                // Add more puzzles here for subsequent days
+                {
+                    date: new Date(2025, 8, 10), // Sept 10, 2025
+                    grid: [
+                        "SOLAR",
+                        "OPERA",
+                        "LEMON",
+                        "ARENA",
+                        "RANGE"
+                    ],
+                    clues: {
+                        across: [
+                            { number: 1, clue: "Sun-powered", row: 0, col: 0, len: 5 },
+                            { number: 5, clue: "La Bohème, for one", row: 1, col: 0, len: 5 },
+                            { number: 6, clue: "Citrus fruit", row: 2, col: 0, len: 5 },
+                            { number: 7, clue: "Sports venue", row: 3, col: 0, len: 5 },
+                            { number: 8, clue: "Mountain ___", row: 4, col: 0, len: 5 },
+                        ],
+                        down: [
+                            { number: 1, clue: "Silly person", row: 0, col: 0, len: 5 },
+                            { number: 2, clue: "Have bills to pay", row: 0, col: 1, len: 5 },
+                            { number: 3, clue: "Permit", row: 0, col: 2, len: 5 },
+                            { number: 4, clue: "Not fake", row: 0, col: 3, len: 5 },
+                            { number: 5, clue: "Annoy", row: 1, col: 4, len: 4 }
+                        ]
+                    }
+                }
+            ];
+
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
+            // Find today's puzzle, or default to the first one
+            let puzzle = puzzles.find(p => p.date.getTime() === today.getTime());
+            if (!puzzle) {
+                puzzle = puzzles[0]; // Fallback to the first puzzle
+            }
+
+
+            const gridContainer = document.getElementById('grid-container');
+            const acrossCluesContainer = document.getElementById('across-clues');
+            const downCluesContainer = document.getElementById('down-clues');
+            const checkPuzzleBtn = document.getElementById('check-puzzle');
+            const successModal = document.getElementById('success-modal');
+            const closeModalBtn = document.getElementById('close-modal');
+
+            document.getElementById('puzzle-date').textContent = puzzle.date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            const gridSize = 5;
+            let currentDirection = 'across';
+            let activeClue = null;
+            const cells = [];
+
+            // Generate Grid
+            for (let r = 0; r < gridSize; r++) {
+                cells[r] = [];
+                for (let c = 0; c < gridSize; c++) {
+                    const cellWrapper = document.createElement('div');
+                    cellWrapper.className = 'grid-cell';
+
+                    const answerChar = puzzle.grid[r] ? puzzle.grid[r][c] : null;
+
+                    if (answerChar && answerChar !== ' ') {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.maxLength = 1;
+                        input.dataset.row = r;
+                        input.dataset.col = c;
+                        input.dataset.answer = answerChar;
+
+                        const clueNumber = getClueNumber(r, c);
+                        if (clueNumber) {
+                            const numberSpan = document.createElement('span');
+                            numberSpan.className = 'number';
+                            numberSpan.textContent = clueNumber;
+                            cellWrapper.appendChild(numberSpan);
+                        }
+                        
+                        cellWrapper.appendChild(input);
+                        cells[r][c] = input;
+                    } else {
+                        cellWrapper.classList.add('black');
+                        cells[r][c] = null;
+                    }
+                    gridContainer.appendChild(cellWrapper);
+                }
+            }
+            
+            // Generate Clues
+            puzzle.clues.across.forEach(clue => {
+                const clueDiv = document.createElement('div');
+                clueDiv.className = 'clue p-2 rounded-md cursor-pointer hover:bg-gray-100';
+                clueDiv.innerHTML = `<span class="font-bold">${clue.number}.</span> ${clue.clue}`;
+                clueDiv.dataset.number = clue.number;
+                clueDiv.dataset.direction = 'across';
+                acrossCluesContainer.appendChild(clueDiv);
+            });
+
+            puzzle.clues.down.forEach(clue => {
+                const clueDiv = document.createElement('div');
+                clueDiv.className = 'clue p-2 rounded-md cursor-pointer hover:bg-gray-100';
+                clueDiv.innerHTML = `<span class="font-bold">${clue.number}.</span> ${clue.clue}`;
+                clueDiv.dataset.number = clue.number;
+                clueDiv.dataset.direction = 'down';
+                downCluesContainer.appendChild(clueDiv);
+            });
+
+            function getClueNumber(row, col) {
+                const acrossClue = puzzle.clues.across.find(c => c.row === row && c.col === col);
+                if (acrossClue) return acrossClue.number;
+                const downClue = puzzle.clues.down.find(c => c.row === row && c.col === col);
+                if (downClue) return downClue.number;
+                return null;
+            }
+
+            function highlightClue(clueNumber, direction) {
+                document.querySelectorAll('.clue').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.grid-cell input').forEach(i => {
+                    i.classList.remove('cell-highlight');
+                    i.classList.remove('cell-focus');
+                });
+
+                const clue = puzzle.clues[direction].find(c => c.number == clueNumber);
+                if (!clue) return;
+
+                activeClue = clue;
+                currentDirection = direction;
+
+                document.querySelector(`.clue[data-number='${clueNumber}'][data-direction='${direction}']`).classList.add('active');
+
+                for (let i = 0; i < clue.len; i++) {
+                    let r = clue.row;
+                    let c = clue.col;
+                    if (direction === 'across') c += i;
+                    else r += i;
+                    
+                    if (cells[r] && cells[r][c]) {
+                        cells[r][c].classList.add('cell-highlight');
+                    }
+                }
+            }
+
+            gridContainer.addEventListener('click', (e) => {
+                if (e.target.tagName === 'INPUT') {
+                    const row = parseInt(e.target.dataset.row);
+                    const col = parseInt(e.target.dataset.col);
+
+                    const acrossClue = findClueForCell(row, col, 'across');
+                    const downClue = findClueForCell(row, col, 'down');
+
+                    if (!acrossClue && !downClue) return;
+                    
+                    if (acrossClue && downClue) {
+                        // If we clicked the same cell twice, switch direction
+                        if (e.target.classList.contains('cell-focus')) {
+                            currentDirection = currentDirection === 'across' ? 'down' : 'across';
+                        } else if (currentDirection === 'across' && acrossClue){
+                            // default to across if possible
+                        } else {
+                            currentDirection = 'down';
+                        }
+                    } else if (acrossClue) {
+                        currentDirection = 'across';
+                    } else if (downClue) {
+                        currentDirection = 'down';
+                    }
+
+                    const clueToHighlight = (currentDirection === 'across') ? acrossClue : downClue;
+                    if(clueToHighlight) {
+                         highlightClue(clueToHighlight.number, currentDirection);
+                         cells[row][col].classList.add('cell-focus');
+                    }
+                }
+            });
+            
+            function findClueForCell(row, col, direction) {
+                 return puzzle.clues[direction].find(clue => {
+                    if (direction === 'across') {
+                        return row === clue.row && col >= clue.col && col < clue.col + clue.len;
+                    } else { // down
+                        return col === clue.col && row >= clue.row && row < clue.row + clue.len;
+                    }
+                });
+            }
+
+            document.querySelectorAll('.clue').forEach(clueEl => {
+                clueEl.addEventListener('click', () => {
+                    const number = clueEl.dataset.number;
+                    const direction = clueEl.dataset.direction;
+                    highlightClue(number, direction);
+                    
+                    const clue = puzzle.clues[direction].find(c => c.number == number);
+                    cells[clue.row][clue.col].focus();
+                    cells[clue.row][clue.col].classList.add('cell-focus');
+
+                });
+            });
+
+            gridContainer.addEventListener('input', (e) => {
+                if (e.target.tagName === 'INPUT' && e.target.value.length === 1) {
+                    moveToNextCell(e.target);
+                }
+            });
+
+            gridContainer.addEventListener('keydown', (e) => {
+                const input = e.target;
+                if (input.tagName !== 'INPUT') return;
+
+                const row = parseInt(input.dataset.row);
+                const col = parseInt(input.dataset.col);
+
+                if (e.key === 'Backspace' && input.value === '') {
+                    moveToPrevCell(input);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if(findClueForCell(row, col, 'down')) currentDirection = 'down';
+                    moveFocus(row - 1, col);
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if(findClueForCell(row, col, 'down')) currentDirection = 'down';
+                    moveFocus(row + 1, col);
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    if(findClueForCell(row, col, 'across')) currentDirection = 'across';
+                    moveFocus(row, col - 1);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    if(findClueForCell(row, col, 'across')) currentDirection = 'across';
+                    moveFocus(row, col + 1);
+                }
+            });
+
+            function moveToNextCell(currentInput) {
+                const row = parseInt(currentInput.dataset.row);
+                const col = parseInt(currentInput.dataset.col);
+
+                let nextRow = row;
+                let nextCol = col;
+
+                if (currentDirection === 'across') {
+                    nextCol++;
+                } else {
+                    nextRow++;
+                }
+                
+                if (activeClue) {
+                    const { row: startRow, col: startCol, len } = activeClue;
+                     if (currentDirection === 'across' && nextCol >= startCol + len) return;
+                     if (currentDirection === 'down' && nextRow >= startRow + len) return;
+                }
+
+                if (cells[nextRow] && cells[nextRow][nextCol]) {
+                    cells[nextRow][nextCol].focus();
+                }
+            }
+            
+             function moveToPrevCell(currentInput) {
+                const row = parseInt(currentInput.dataset.row);
+                const col = parseInt(currentInput.dataset.col);
+                let prevRow = row;
+                let prevCol = col;
+
+                if (currentDirection === 'across') {
+                    prevCol--;
+                } else {
+                    prevRow--;
+                }
+                
+                if (activeClue) {
+                    const { row: startRow, col: startCol } = activeClue;
+                     if (currentDirection === 'across' && prevCol < startCol) return;
+                     if (currentDirection === 'down' && prevRow < startRow) return;
+                }
+
+                if (cells[prevRow] && cells[prevRow][prevCol]) {
+                    cells[prevRow][prevCol].focus();
+                    cells[prevRow][prevCol].value = '';
+                }
+            }
+            
+            function moveFocus(row, col) {
+                if (cells[row] && cells[row][col]) {
+                    cells[row][col].focus();
+                    const a = findClueForCell(row, col, 'across');
+                    const d = findClueForCell(row, col, 'down');
+                    const clue = currentDirection === 'across' ? a : d;
+                    if(clue) {
+                       highlightClue(clue.number, currentDirection);
+                       cells[row][col].classList.add('cell-focus');
+                    } else {
+                         const otherClue = currentDirection === 'across' ? d : a;
+                         if(otherClue) {
+                            currentDirection = currentDirection === 'across' ? 'down' : 'across';
+                            highlightClue(otherClue.number, currentDirection);
+                            cells[row][col].classList.add('cell-focus');
+                         }
+                    }
+                }
+            }
+            
+            checkPuzzleBtn.addEventListener('click', () => {
+                let allCorrect = true;
+                for (let r = 0; r < gridSize; r++) {
+                    for (let c = 0; c < gridSize; c++) {
+                        const input = cells[r][c];
+                        if (input) {
+                            if (input.value.toUpperCase() !== input.dataset.answer.toUpperCase()) {
+                                allCorrect = false;
+                                input.style.backgroundColor = '#FECACA'; // red-200
+                            } else {
+                                input.style.backgroundColor = '#D1FAE5'; // green-200
+                            }
+                        }
+                    }
+                }
+                
+                if (allCorrect) {
+                    successModal.classList.remove('hidden');
+                }
+            });
+
+            closeModalBtn.addEventListener('click', () => {
+                successModal.classList.add('hidden');
+            });
+            
+            // Highlight first clue on load
+            if(puzzle.clues.across.length > 0) {
+                 highlightClue(puzzle.clues.across[0].number, 'across');
+                 cells[puzzle.clues.across[0].row][puzzle.clues.across[0].col].focus();
+                 cells[puzzle.clues.across[0].row][puzzle.clues.across[0].col].classList.add('cell-focus');
+            }
+        });
+
+    </script>
+</body>
+</html>
